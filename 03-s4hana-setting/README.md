@@ -1,115 +1,105 @@
----
-parser: v2
-time: 30
-author_name: Jacky Liu
----
+# Integrate SAP S/4HANA Cloud with SAP BTP and Expose the Business Partner API
 
-# Integrate SAP S/4HANA Cloud with SAP BTP and Expose Business Partner API
+<!-- description --> Configure a Communication Arrangement in SAP S/4HANA Cloud to expose the Business Partner OData API (`API_BUSINESS_PARTNER`), then create a Destination in your SAP BTP subaccount to consume it from Cloud Foundry applications.
 
-<!-- description --> Configure a Communication Arrangement in SAP S/4HANA Cloud to expose the Business Partner OData API, then create a Destination in your SAP BTP subaccount to consume it.
+## What You Will Learn
 
-## You will learn
-
-- How to create a Communication System in SAP S/4HANA Cloud pointing to your BTP subaccount
-- How to create a Communication Arrangement for the Business Partner integration scenario (`SAP_COM_0008`)
-- How to configure a Destination in SAP BTP to consume the Business Partner OData API
+- How to create a **Communication System** in SAP S/4HANA Cloud that represents your BTP subaccount
+- How to create a **Communication Arrangement** for scenario `SAP_COM_0008` (Business Partner, Customer and Supplier Integration)
+- How to configure an **HTTP Destination** in SAP BTP to authenticate against the Business Partner OData V2 API
 
 ## Prerequisites
 
 - SAP S/4HANA Cloud tenant with administrator access
-- SAP BTP subaccount set up (see [00-BTP-Initial-Setup](../00-BTP-Initial-Setup/README.md))
-- SAP BTP subaccount has the **Destination** service entitled and a `dev` Cloud Foundry space available
-
-> **Note on screenshots:** Images for Part 3 (BTP Destination) are included in `img/`. Images for Parts 1 and 2 (S/4HANA Cloud Communication Systems and Communication Arrangements Fiori apps) need to be captured from your S/4HANA Cloud tenant and saved to `img/` using the filenames referenced below.
+- SAP BTP subaccount with the **Destination** service entitled and a `dev` Cloud Foundry space available
 
 ---
 
 ## Part 1 — Create a Communication System in SAP S/4HANA Cloud
 
-A Communication System represents the external system (your BTP subaccount) that S/4HANA Cloud will communicate with.
+A Communication System identifies the external system — in this case your BTP subaccount — that S/4HANA Cloud will accept inbound calls from. You will create one system and attach a dedicated inbound communication user to it.
 
-### Open the Communication Systems app
+### Step 1.1 — Open the Communication Systems app
 
 1. Log in to your SAP S/4HANA Cloud tenant as an administrator.
-
 2. Open the **SAP Fiori Launchpad** and search for the app **Communication Systems**.
+3. Click **New**. A dialog appears prompting for the System ID and System Name.
 
-3. Click **New** to create a new communication system.
+   ![Communication Systems list – clicking New opens the creation dialog](img/image.png)
 
-<!-- border -->![Communication Systems app – New button](img/comm-system-new.png)
+4. Enter the following values, then click **Create**:
 
-### Configure the Communication System
+   | Field           | Value         |
+   | --------------- | ------------- |
+   | **System ID**   | `BTP_BID_SUB` |
+   | **System Name** | `BTP_BID_SUB` |
 
-4. Enter the following values:
+### Step 1.2 — Configure General and Technical Data
 
-   | Field | Value |
-   |---|---|
-   | **System ID** | `BTP_SUBACCOUNT` |
-   | **System Name** | `SAP BTP Subaccount` |
+5. The system record opens. On the **General** tab, locate the **Technical Data** section.
+6. Check the **Inbound Only** checkbox. This restricts the system to accepting inbound calls only, which is the correct setup for a BTP consumer.
 
-5. Click **Create**.
+   ![Communication System BTP_BID_SUB – Inbound Only checkbox highlighted](img/image-1.png)
 
-6. Under **General** tab, set the **Host Name** to your BTP subaccount API endpoint, for example:
-   ```
-   <subaccount-subdomain>.authentication.<region>.hana.ondemand.com
-   ```
+### Step 1.3 — Add an Inbound Communication User
 
-<!-- border -->![Communication System – General settings](img/comm-system-general.png)
+7. Scroll down to the **Users for Inbound Communication** section and click **+**.
+8. Select **New User**. The **Create Communication User** screen opens.
+9. Enter a **User Name** (e.g. `BID_INBOUND`) and click **Propose Password** to generate a strong password.
 
-7. Scroll down to the **Users for Inbound Communication** section. Click **+** to add a new user.
+   > **Important:** Copy the proposed password before saving — it is displayed only once and will be needed when configuring the BTP Destination in Part 3.
 
-8. Select **New User** and provide a username and password for the inbound communication user (e.g. `BTP_INBOUND`). Note these credentials — they will be used in the BTP Destination configuration.
+   ![Create Communication User – username BID_INBOUND and proposed password highlighted](img/image-2.png)
 
-<!-- border -->![Communication System – Inbound user](img/comm-system-inbound-user.png)
+10. Click **Create** to save the user.
+11. You are returned to the Communication System. The new user appears in the **Users for Inbound Communication** table with authentication method **User ID and Password**.
 
-9. Click **Save**.
+    ![Communication System – BID_INBOUND user added to inbound communication table](img/image-3.png)
+
+12. Click **Save**.
 
 ---
 
-## Part 2 — Create a Communication Arrangement for Business Partner API
+## Part 2 — Create a Communication Arrangement for the Business Partner API
 
-The Communication Arrangement activates a specific integration scenario and links it to the Communication System you created above.
+A Communication Arrangement activates a specific integration scenario and links it to the Communication System you created in Part 1. The scenario `SAP_COM_0008` exposes all Business Partner, Customer, and Supplier APIs.
 
-### Open the Communication Arrangements app
+### Step 2.1 — Open the Communication Arrangements app
 
 1. From the SAP Fiori Launchpad, open the app **Communication Arrangements**.
+2. Click **New**. A creation dialog appears.
 
-2. Click **New**.
+### Step 2.2 — Select the Scenario and Name the Arrangement
 
-<!-- border -->![Communication Arrangements – New](img/comm-arrangement-new.png)
-
-### Select the Business Partner scenario
-
-3. In the **Scenario** field, click the value help and search for:
-   ```
-   SAP_COM_0008
-   ```
-   Select **Business Partner, Customer and Supplier Integration** (`SAP_COM_0008`).
-
-<!-- border -->![Communication Arrangement – scenario selection](img/comm-arrangement-scenario.png)
-
-4. In the **Arrangement Name** field, enter:
-   ```
-   BUSINESS_PARTNER_BTP
-   ```
-
+3. In the **Scenario** field, enter `SAP_COM_0008` and select **Business Partner, Customer and Supplier Integration**.
+4. In the **Arrangement Name** field, enter `BID_SAP_COM_0008`.
 5. Click **Create**.
 
-### Bind the Communication System
+   ![New Communication Arrangement dialog – scenario SAP_COM_0008 and name BID_SAP_COM_0008](img/image-4.png)
 
-6. In the **Communication System** field, select the system you created in Part 1: `BTP_SUBACCOUNT`.
+### Step 2.3 — Bind the Communication System
 
-<!-- border -->![Communication Arrangement – bind system](img/comm-arrangement-system.png)
+6. In the **Common Data** section, set the **Communication System** field to `BTP_BID_SUB` (the system created in Part 1).
 
-7. Under **Inbound Communication**, confirm the authentication method is **User ID and Password**.
+   ![Communication Arrangement BID_SAP_COM_0008 – Communication System set to BTP_BID_SUB](img/image-5.png)
 
-8. Note the **Service URL / Service Interface** shown under **Inbound Communication**. It will be in the form:
+### Step 2.4 — Note the Business Partner API URL
+
+7. Scroll down to the **Inbound Services** table. Locate the row for **Business Partner (A2X)** with protocol **OData V2** and copy its **Service URL/Service Interface** value. It follows this pattern:
+
    ```
-   https://<tenant>.s4hana.ondemand.com/sap/opu/odata/sap/API_BUSINESS_PARTNER
+   https://<tenant>-api.s4hana.ondemand.com/sap/opu/odata/sap/API_BUSINESS_PARTNER
    ```
-   Copy this URL — you will need it when configuring the BTP Destination.
 
-<!-- border -->![Communication Arrangement – service URL](img/comm-arrangement-url.png)
+   You will use this URL (the host part only) when creating the BTP Destination.
+
+   ![Inbound Services table – Business Partner (A2X) OData V2 URL highlighted](img/image-6.png)
+
+### Step 2.5 — Deactivate Outbound Services
+
+8. Scroll further down to the **Outbound Services** section. For each outbound service listed, uncheck the **Active** checkbox. This prevents unnecessary outbound replication jobs from being triggered.
+
+   ![Outbound Services – Active checkbox unchecked for Replicate Customers service](img/image-7.png)
 
 9. Click **Save**.
 
@@ -117,61 +107,67 @@ The Communication Arrangement activates a specific integration scenario and link
 
 ## Part 3 — Create a Destination in SAP BTP
 
-Now configure the BTP Destination service so applications in your BTP subaccount can call the Business Partner OData API.
+With the S/4HANA Cloud side configured, create an HTTP Destination in your BTP subaccount so that Cloud Foundry applications can reach the Business Partner API using the Destination service.
 
-### Open the BTP Cockpit
+### Step 3.1 — Open the Destination Editor
 
 1. Go to your SAP BTP subaccount in the [BTP Cockpit](https://cockpit.btp.cloud.sap).
-
 2. In the left navigation, go to **Connectivity** → **Destinations**.
+3. Click **Create** (or **New Destination**).
 
-3. Click **New Destination**.
+### Step 3.2 — Configure Main Properties and Authentication
 
-<!-- border -->![BTP Cockpit – New Destination](img/btp-destination-new.png)
+4. Fill in the destination properties as follows:
 
-### Configure the Destination
+   | Field              | Value                                                                                |
+   | ------------------ | ------------------------------------------------------------------------------------ |
+   | **Name**           | `S4_BP`                                                                              |
+   | **Type**           | `HTTP`                                                                               |
+   | **Description**    | `S4HC Business Partner`                                                              |
+   | **URL**            | The host from the Communication Arrangement URL, e.g. `https://<tenant>-api.s4hana.ondemand.com` |
+   | **Proxy Type**     | `Internet`                                                                           |
+   | **Authentication** | `BasicAuthentication`                                                                |
+   | **User**           | `BID_INBOUND` (the inbound communication user created in Step 1.3)                   |
+   | **Password**       | The password you saved in Step 1.3                                                   |
 
-4. Enter the following values:
+   ![BTP Destination S4_BP – main properties and BasicAuthentication configured](img/image-9.png)
 
-   | Field | Value |
-   |---|---|
-   | **Name** | `S4HANA_BUSINESS_PARTNER` |
-   | **Type** | `HTTP` |
-   | **Description** | `S/4HANA Cloud Business Partner API` |
-   | **URL** | The service URL copied from the Communication Arrangement, e.g. `https://<tenant>.s4hana.ondemand.com/sap/opu/odata/sap/API_BUSINESS_PARTNER` |
-   | **Proxy Type** | `Internet` |
-   | **Authentication** | `BasicAuthentication` |
-   | **User** | The inbound communication user created in Part 1, e.g. `BTP_INBOUND` |
-   | **Password** | The password set for that user |
+### Step 3.3 — Add Additional Properties
 
-<!-- border -->![BTP Destination – configuration](img/btp-destination-config.png)
+5. Under **Additional Properties**, click **Add Property** and add the following two entries:
 
-5. Under **Additional Properties**, click **New Property** and add:
+   | Key                        | Value                                         |
+   | -------------------------- | --------------------------------------------- |
+   | `sap-client`               | Your S/4HANA Cloud client number (e.g. `100`) |
+   | `HTML5.DynamicDestination` | `true`                                        |
 
-   | Property | Value |
-   |---|---|
-   | `sap-client` | Your S/4HANA Cloud client number (e.g. `100`) |
-   | `HTML5.DynamicDestination` | `true` |
+   ![BTP Destination S4_BP – sap-client and HTML5.DynamicDestination additional properties](img/image-8.png)
 
 6. Click **Save**.
 
-### Test the connection
+### Step 3.4 — Test the Connection
 
-7. Click **Check Connection**. A `200 OK` response confirms the destination is correctly configured and the Business Partner API is reachable from your BTP subaccount.
+7. Click **Check Connection**. A pop-up confirms **HTTP request (without authentication) to S4_BP destination succeeded**, which means connectivity from your BTP subaccount to S/4HANA Cloud is working correctly.
 
-<!-- border -->![BTP Destination – connection check](img/btp-destination-check.png)
+   ![Check Connection result – HTTP request to S4_BP destination succeeded](img/image-10.png)
 
 ---
 
 ## Summary
 
-You have:
+You have completed the full integration between SAP S/4HANA Cloud and SAP BTP:
 
-- Created a **Communication System** in SAP S/4HANA Cloud representing your BTP subaccount
-- Created a **Communication Arrangement** for scenario `SAP_COM_0008` to expose the Business Partner OData API (`API_BUSINESS_PARTNER`)
-- Configured a **BTP Destination** (`S4HANA_BUSINESS_PARTNER`) to consume that API from your BTP subaccount
+| What you created | Where | Purpose |
+| --- | --- | --- |
+| Communication System `BTP_BID_SUB` | SAP S/4HANA Cloud | Identifies the BTP subaccount as a trusted inbound caller |
+| Communication User `BID_INBOUND` | SAP S/4HANA Cloud | Provides credentials for inbound Basic Authentication |
+| Communication Arrangement `BID_SAP_COM_0008` | SAP S/4HANA Cloud | Activates the Business Partner API for inbound access |
+| Destination `S4_BP` | SAP BTP | Allows CF applications to call `API_BUSINESS_PARTNER` via the Destination service |
 
-Applications running in your BTP Cloud Foundry space can now use the Destination service to call the Business Partner OData V2 endpoint:
+Applications running in your BTP Cloud Foundry space can now use the Destination service to call the Business Partner OData V2 API. The host is:
+
 ```
-/sap/opu/odata/sap/API_BUSINESS_PARTNER
+https://<tenant>-api.s4hana.ondemand.com
 ```
+
+The API path (`/sap/opu/odata/sap/API_BUSINESS_PARTNER`) is appended by the application at runtime.
