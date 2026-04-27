@@ -1,27 +1,21 @@
----
-parser: v2
-time: 20
-author_name: Jacky Liu
----
-
 # Configure SAP AI Launchpad: Connection, Resource Group, Model Deployment, and BTP Destination
 
-<!-- description --> Connect SAP AI Launchpad to SAP AI Core using a service key, select a resource group, deploy GPT-4o and a text embedding model from the Model Library, and create a BTP Destination to enable application access to AI Core.
+<!-- description --> Connect SAP AI Launchpad to SAP AI Core using a service key, select a resource group, deploy GPT-5 and a text embedding model from the Model Library, and create a BTP Destination to enable application access to AI Core.
 
 ## You will learn
 
 - How to add an SAP AI Core connection in SAP AI Launchpad using service key credentials
 - How to select a resource group to scope your AI operations
-- How to deploy GPT-4o and a text embedding model via the Generative AI Hub Model Library
+- How to deploy GPT-5 and a text embedding model via the Generative AI Hub Model Library
 - How to create a BTP Destination for SAP AI Core so applications can call the API
 
-## Prerequisites
+<!-- ## Prerequisites
 
 - SAP AI Launchpad subscribed and accessible (see [00-BTP-Initial-Setup](../00-BTP-Initial-Setup/README.md))
 - SAP AI Core service instance created with the `extended` plan
 - SAP AI Core service key available (JSON credentials from your Cloud Foundry service key binding)
 
----
+--- -->
 
 ## Part 1 — Add a Connection to SAP AI Core
 
