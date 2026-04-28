@@ -152,6 +152,7 @@ Click **Next Step** to continue. -->
 2. Configure **Allowed Connections** and optionally enable the **SAP Cloud Connector**.
 
 3. Configure **Instance Mapping** if you intend to use this instance with Cloud Foundry.
+   ![alt text](image.png)
 
 4. Click **Next Step** to continue.
 
