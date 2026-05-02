@@ -136,23 +136,23 @@ Repeat the same process to deploy a text embedding model, which is required for 
 
 ## Part 5 — Create a BTP Destination for SAP AI Core
 
-Applications running in your BTP subaccount access SAP AI Core through the **Destination** service. This step creates a destination named `bid-aicore` using the OAuth2ClientCredentials authentication method, so your app can obtain tokens and call the AI Core API automatically.
+BTP applications communicate with SAP AI Core through the **Destination** service, which handles OAuth2 token exchange automatically. In this part, you create a destination named `bid-aicore` so that your procurement application can call the AI Core API without managing credentials directly.
 
-### Retrieve the AI Core service key
+### Retrieve the AI Core service key credentials
 
 15. In the BTP cockpit, navigate to your subaccount → **Services** → **Instances and Subscriptions**.
 
-16. Locate your SAP AI Core service instance, click the three dots, and choose **View Credentials** to open the service key.
+16. Locate your SAP AI Core service instance, click the **⋮** (Actions) icon, and select **View Credentials**.
 
     ![Service key – credentials view](img/image-3.png)
 
     ![Service key – full JSON for destination](img/image-4.png)
 
-    Note the following values — you will need them in the next step:
+    Keep this panel open. You will copy four values from the JSON into the destination form:
 
-    | Value to copy     | Service key field        |
+    | Destination field | Service key field        |
     | ----------------- | ------------------------ |
-    | AI Core API URL   | `serviceurls.AI_API_URL` |
+    | URL               | `serviceurls.AI_API_URL` |
     | Client ID         | `clientid`               |
     | Client Secret     | `clientsecret`           |
     | Token Service URL | `url` + `/oauth/token`   |
@@ -165,7 +165,7 @@ Applications running in your BTP subaccount access SAP AI Core through the **Des
 
     ![BTP Cockpit – New Destination](img/image-6.png)
 
-19. Fill in the destination properties using the values from your service key:
+19. Fill in the destination properties as follows:
 
     | Field                 | Value                                |
     | --------------------- | ------------------------------------ |
@@ -181,7 +181,73 @@ Applications running in your BTP subaccount access SAP AI Core through the **Des
 
     ![Destination configuration filled in](img/image-13.png)
 
-20. Click **Save**, then click **Check Connection**. A `200 OK` response confirms that the destination is correctly configured and can reach the AI Core API.
+20. Click **Save**, then click **Check Connection**.
+
+    A `200 OK` response confirms the destination is correctly configured and can reach the AI Core API. If you receive an error, verify that the Token Service URL ends with `/oauth/token` and that the client credentials match the service key exactly.
+
+## Part 6 — Create an Orchestration Prompt Template
+
+The **Orchestration** feature in SAP Generative AI Hub lets you define reusable prompt templates with named input variables. In this part, you create a template called `bidevaluationtemplate` that the procurement application will call at runtime to evaluate supplier bids against tender criteria.
+
+### Open the Orchestration app
+
+21. In the left navigation, expand **Generative AI Hub** and click **Orchestration**.
+
+    ![Generative AI Hub – Orchestration menu item](img/image-14.png)
+
+22. On the **Orchestration** page, click **Create**.
+
+    ![Orchestration list – Create button](img/image-15.png)
+
+### Configure the prompt template
+
+23. In the **Orchestration Details** editor, expand the **Prompt Template** module. Add two messages:
+    - **System** message — sets the model's role as a procurement evaluation expert:
+
+      ```
+      你是一位专业的采购评估专家，精通中文商务和技术文件。以下所有内容均以中文撰写，请直接以中文进行分析，无需翻译。
+      ```
+
+    - **User** message — defines the evaluation task and scoring rules, using three input variables (`{{?guidance}}`, `{{?biddingContext}}`, `{{?bidContext}}`):
+
+      ```
+      按照评估标准和招标文件，对投标文件进行评估打分。
+
+      ## 评估标准 (Evaluation Criterion)
+      {{?guidance}}
+
+      ## 招标文件 (Project Bidding Document - reference requirements)
+      {{?biddingContext}}
+
+      ## 投标文件 (Supplier Bid Document - to evaluate)
+      {{?bidContext}}
+
+      ## 评分规则
+
+      1. 评估标准会给出满分及评分规则。
+      2. **逐档对照**：找到投标文件中与该评审因素对应的内容，与各评分档位的描述逐一比对后归档。
+      3. **就高不就低**：若投标内容介于两档之间，参照评分标准措辞（如”基本满足”、”较好满足”）判断归档。
+      4. **资质与业绩项**：对于涉及证书、合同金额、工程业绩等可验证项，若投标文件未提供对应材料或信息不完整，按评分标准中”不满足”条件处理。
+      5. **置信度**：若投标文件对该因素表述模糊、内容缺失或关键章节空白，请相应降低置信度。
+
+      - 提供置信度（0–1），若中文表述模糊、使用高度专业术语或关键章节缺失，请降低置信度。
+      - 用中文撰写2–4句简洁说明，阐述评分理由，并引用投标文件中的关键中文原文作为佐证。
+      - 满分 从 评估标准 得到，如缺失，按100分算。
+      - 仅输出以下格式的JSON对象，不得包含其他内容：
+      {“score”: <按该因素评分档位实际得分数字>,”fullscore”:<满分> “confidence”: <0-1>, “explanation”: “<text in Chinese>”}
+      ```
+
+### Save the orchestration configuration
+
+24. Click **Save**. In the **Save Orchestration Configuration** dialog:
+    - Set **Orchestration Configuration Name** to `bidevaluationtemplate`.
+    - Set **Scenario Name** to `foundation-models`.
+
+    Click **Save** to confirm.
+
+    ![Save Orchestration Configuration dialog](img/image-16.png)
+
+> **Note:** The three input variables — `guidance`, `biddingContext`, and `bidContext` — are injected at runtime by the procurement application. The `{{?variableName}}` syntax marks them as optional placeholders; the application must supply all three for a complete evaluation.
 
 ---
 
@@ -189,10 +255,11 @@ Applications running in your BTP subaccount access SAP AI Core through the **Des
 
 You have completed the full SAP AI Launchpad configuration for this use case:
 
-| Step                      | What was configured                                                                       |
-| ------------------------- | ----------------------------------------------------------------------------------------- |
-| Connection                | SAP AI Launchpad connected to SAP AI Core via service key (`my-ai-core`)                  |
-| Resource Group            | `default` resource group selected to scope all operations                                 |
-| GPT-4o deployment         | Deployed and running in the Generative AI Hub — ready for chat and reasoning tasks        |
-| Text embedding deployment | Deployed and running — ready for vector search and semantic retrieval                     |
-| BTP Destination           | `bid-aicore` destination created — applications can now call the AI Core API using OAuth2 |
+| Step                      | What was configured                                                                                            |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Connection                | SAP AI Launchpad connected to SAP AI Core via service key (`my-ai-core`)                                       |
+| Resource Group            | `default` resource group selected to scope all operations                                                      |
+| GPT-4o deployment         | Deployed and running in the Generative AI Hub — ready for chat and reasoning tasks                             |
+| Text embedding deployment | Deployed and running — ready for vector search and semantic retrieval                                          |
+| BTP Destination           | `bid-aicore` destination created — applications can now call the AI Core API using OAuth2                      |
+| Orchestration template    | `bidevaluationtemplate` created — procurement application can now invoke structured bid evaluation via AI Core |
